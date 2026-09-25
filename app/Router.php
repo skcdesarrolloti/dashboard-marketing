@@ -323,9 +323,21 @@ final class Router
                 if ($tplChannel !== strtolower($channel)) throw new RuntimeException('La plantilla seleccionada no corresponde al canal de envío.');
                 $templateRecord = $tpl;
                 $template = ['id' => $templateId, 'name' => trim((string) ($tpl['nombre'] ?? ''))];
+                if ($tplChannel === 'whatsapp') {
+                    $template = array_merge($template, TemplateRepository::whatsappConfig($tpl));
+                }
             }
             $subject = trim((string) ($_POST['subject'] ?? ($templateRecord['asunto'] ?? '')));
             $message = trim((string) ($_POST['message'] ?? ($templateRecord['contenido'] ?? '')));
+            if (strtolower($channel) === 'whatsapp' && $templateRecord !== []) {
+                $message = trim((string) ($template['body_text'] ?? TemplateRepository::whatsappBody($templateRecord)));
+                foreach (['header_url' => 'whatsapp_media_url', 'button_url_parameter' => 'whatsapp_button_url_parameter'] as $configKey => $postKey) {
+                    $postedValue = trim((string) ($_POST[$postKey] ?? ''));
+                    if ($postedValue !== '') {
+                        $template[$configKey] = $postedValue;
+                    }
+                }
+            }
             if ($subject === '' && $templateRecord !== []) $subject = trim((string) ($templateRecord['asunto'] ?? ''));
             if ($message === '' && $templateRecord !== []) $message = trim((string) ($templateRecord['contenido'] ?? ''));
             $attachment = null;

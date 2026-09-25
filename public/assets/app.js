@@ -494,6 +494,56 @@ function syncPlainTemplateSource() {
   source.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function updateWhatsAppTemplateFields() {
+  const headerType = document.querySelector('[data-whatsapp-header-type]')?.value || 'none';
+  const buttonType = document.querySelector('[data-whatsapp-button-type]')?.value || 'none';
+  document.querySelectorAll('[data-whatsapp-header-url]').forEach((el) => {
+    el.hidden = headerType === 'none';
+    el.querySelectorAll('input,select,textarea').forEach((input) => { input.disabled = headerType === 'none'; });
+  });
+  document.querySelectorAll('[data-whatsapp-header-filename]').forEach((el) => {
+    el.hidden = headerType !== 'document';
+    el.querySelectorAll('input,select,textarea').forEach((input) => { input.disabled = headerType !== 'document'; });
+  });
+  document.querySelectorAll('[data-whatsapp-button-parameter]').forEach((el) => {
+    el.hidden = buttonType !== 'url_dynamic';
+    el.querySelectorAll('input,select,textarea').forEach((input) => { input.disabled = buttonType !== 'url_dynamic'; });
+  });
+}
+
+function updateTemplateChannelType(type) {
+  const email = type === 'email';
+  const whatsapp = type === 'whatsapp';
+  const source = document.querySelector('[data-template-content]');
+  const plain = document.querySelector('[data-plain-template-content]');
+  const emailEditor = document.querySelector('[data-email-editor]');
+  const plainEditor = document.querySelector('[data-plain-editor]');
+  const channelBadge = document.querySelector('[data-current-template-channel]');
+  document.querySelectorAll('[data-email-only]').forEach((el) => {
+    el.hidden = !email;
+    el.querySelectorAll('input,select,textarea').forEach((input) => { input.disabled = !email; });
+  });
+  if (emailEditor) emailEditor.hidden = !email;
+  if (plainEditor) plainEditor.hidden = email;
+  document.querySelectorAll('[data-whatsapp-only]').forEach((el) => {
+    el.hidden = !whatsapp;
+    el.querySelectorAll('input,select,textarea').forEach((input) => { input.disabled = !whatsapp; });
+  });
+  if (channelBadge) channelBadge.textContent = type.toUpperCase();
+  if (email) {
+    if (window.templateCodeEditor && source && window.templateCodeEditor.getValue() !== source.value) window.templateCodeEditor.setValue(source.value, -1);
+    window.setTimeout(() => window.templateCodeEditor?.resize(), 0);
+  } else if (plain && source) {
+    plain.value = source.value;
+    if (type === 'sms') plain.maxLength = 160;
+    else plain.removeAttribute('maxlength');
+    plain.placeholder = type === 'sms' ? 'Escribe el SMS (máximo 160 caracteres)' : 'Escribe el cuerpo aprobado para WhatsApp con variables como {{nombre}}';
+  }
+  updateWhatsAppTemplateFields();
+  refreshTemplateTools();
+  renderTemplatePreview();
+}
+
 function renderTemplatePreview() {
   const textarea = document.querySelector('[data-template-content]');
   const preview = document.querySelector('[data-template-preview]');
@@ -628,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const plain = document.querySelector('[data-plain-template-content]');
   const source = document.querySelector('[data-template-content]');
   if (plain && source) plain.value = source.value;
+  updateTemplateChannelType(document.querySelector('[data-template-type]')?.value || 'email');
   refreshTemplateTools();
   renderTemplatePreview();
 });
@@ -650,27 +701,12 @@ document.addEventListener('change', (event) => {
     event.target.value = '';
     return;
   }
-  if (!event.target.matches('[data-template-type]')) return;
-  const email = event.target.value === 'email';
-  const source = document.querySelector('[data-template-content]');
-  const plain = document.querySelector('[data-plain-template-content]');
-  const emailEditor = document.querySelector('[data-email-editor]');
-  const plainEditor = document.querySelector('[data-plain-editor]');
-  const channelBadge = document.querySelector('[data-current-template-channel]');
-  document.querySelectorAll('[data-email-only]').forEach((el) => { el.hidden = !email; el.querySelectorAll('input').forEach((input) => input.disabled = !email); });
-  if (emailEditor) emailEditor.hidden = !email;
-  if (plainEditor) plainEditor.hidden = email;
-  document.querySelectorAll('[data-whatsapp-only]').forEach((el) => { el.hidden = event.target.value !== 'whatsapp'; });
-  if (channelBadge) channelBadge.textContent = event.target.value.toUpperCase();
-  if (email) {
-    if (window.templateCodeEditor && source && window.templateCodeEditor.getValue() !== source.value) window.templateCodeEditor.setValue(source.value, -1);
-    window.setTimeout(() => window.templateCodeEditor?.resize(), 0);
-  } else if (plain && source) {
-    plain.value = source.value;
-    plain.maxLength = event.target.value === 'sms' ? 160 : -1;
-    plain.placeholder = event.target.value === 'sms' ? 'Escribe el SMS (máximo 160 caracteres)' : 'Escribe el mensaje de WhatsApp en texto plano';
+  if (event.target.matches('[data-whatsapp-header-type], [data-whatsapp-button-type]')) {
+    updateWhatsAppTemplateFields();
+    return;
   }
-  refreshTemplateTools(); renderTemplatePreview();
+  if (!event.target.matches('[data-template-type]')) return;
+  updateTemplateChannelType(event.target.value || 'email');
 });
 
 document.addEventListener('submit', (event) => {

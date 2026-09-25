@@ -65,6 +65,10 @@
     const subjectWrap = form.querySelector('[data-subject-wrap]');
     const attachment = form.querySelector('input[name="attachment"]');
     const attachmentWrap = form.querySelector('[data-attachment-wrap]');
+    const whatsappMedia = form.querySelector('input[name="whatsapp_media_url"]');
+    const whatsappMediaWrap = form.querySelector('[data-whatsapp-media-wrap]');
+    const whatsappButton = form.querySelector('input[name="whatsapp_button_url_parameter"]');
+    const whatsappButtonWrap = form.querySelector('[data-whatsapp-button-wrap]');
 
     if (subject) {
       subject.disabled = !email;
@@ -73,6 +77,10 @@
     if (subjectWrap) subjectWrap.hidden = !email;
     if (attachment) attachment.disabled = !email;
     if (attachmentWrap) attachmentWrap.hidden = !email;
+    if (whatsappMedia) whatsappMedia.disabled = channel !== 'whatsapp';
+    if (whatsappMediaWrap) whatsappMediaWrap.hidden = channel !== 'whatsapp';
+    if (whatsappButton) whatsappButton.disabled = channel !== 'whatsapp';
+    if (whatsappButtonWrap) whatsappButtonWrap.hidden = channel !== 'whatsapp';
 
     const templatePicker = form.querySelector('[data-template-picker]');
     form.querySelectorAll('[data-template-picker] option').forEach((option) => {
@@ -110,8 +118,12 @@
       if (!option || !form) return;
       const subject = form.querySelector('input[name="subject"]');
       const message = form.querySelector('textarea[name="message"]');
+      const whatsappMedia = form.querySelector('input[name="whatsapp_media_url"]');
+      const whatsappButton = form.querySelector('input[name="whatsapp_button_url_parameter"]');
       if (subject && option.dataset.subject) subject.value = option.dataset.subject;
       if (message && option.dataset.message) message.value = option.dataset.message;
+      if (whatsappMedia) whatsappMedia.value = option.dataset.whatsappHeaderUrl || '';
+      if (whatsappButton) whatsappButton.value = option.dataset.whatsappButtonParam || '';
       updateSmsCounter(form);
     }
 
@@ -193,11 +205,15 @@
         const templatePicker = form.querySelector('[data-template-picker]');
         const subject = form.querySelector('input[name="subject"]');
         const message = form.querySelector('textarea[name="message"]');
+        const whatsappMedia = form.querySelector('input[name="whatsapp_media_url"]');
+        const whatsappButton = form.querySelector('input[name="whatsapp_button_url_parameter"]');
         if (campaignInput) campaignInput.value = '';
         if (campaignPicker) campaignPicker.value = '';
         if (templatePicker) templatePicker.value = '';
         if (subject) subject.value = '';
         if (message) message.value = '';
+        if (whatsappMedia) whatsappMedia.value = '';
+        if (whatsappButton) whatsappButton.value = '';
       }
       if (channelSelect) {
         channelSelect.value = send.dataset.sendChannel || 'email';

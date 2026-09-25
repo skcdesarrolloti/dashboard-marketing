@@ -14,7 +14,7 @@
   </form>
   <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Asunto</th><th>Contenido</th><th>Acciones</th></tr></thead><tbody>
   <?php foreach($data['items'] as $row):?><tr>
-    <td><strong><?=e($row['nombre']??'')?></strong></td><td><span class="badge"><?=e(strtoupper((string)($row['tipo']??'')))?></span></td><td><?=e($row['asunto']??'')?></td><td><?=e(mb_strimwidth(strip_tags((string)($row['contenido']??'')),0,110,'…'))?></td>
+    <td><strong><?=e($row['nombre']??'')?></strong></td><td><span class="badge"><?=e(strtoupper((string)($row['tipo']??'')))?></span></td><td><?=e($row['asunto']??'')?></td><td><?=e(\App\TemplateRepository::whatsappListSummary($row))?></td>
     <td class="actions"><a class="button ghost" href="<?=e(url(['page'=>'plantilla-editor','id'=>(int)$row['_ID']]))?>">Editar</a><button form="dup-template-<?=e((int)$row['_ID'])?>">Duplicar</button><?php if(($row['tipo']??'email')==='email'):?><button form="test-template-<?=e((int)$row['_ID'])?>">Enviar prueba</button><?php endif;?><button class="danger" form="delete-template-<?=e((int)$row['_ID'])?>" onclick="return confirm('¿Eliminar esta plantilla?')">Eliminar</button></td>
   </tr><?php endforeach;?>
   <?php if(!$data['items']):?><tr><td colspan="5" class="empty-state">No hay plantillas para estos filtros.</td></tr><?php endif;?>

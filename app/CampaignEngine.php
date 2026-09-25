@@ -46,6 +46,9 @@ final class CampaignEngine
         if ($channel === 'sms' && mb_strlen(self::SMS_PROVIDER_PREFIX . $message) > self::SMS_MAX) {
             throw new RuntimeException('SMS excede ' . self::SMS_MAX . ' caracteres.');
         }
+        if ($channel === 'whatsapp' && trim((string) ($template['official_template'] ?? '')) === '') {
+            throw new RuntimeException('WhatsApp oficial requiere una plantilla aprobada de Meta.');
+        }
 
         $repo = new ActorRepository();
         $recipients = $repo->recipients($type, $ids, $channel);
@@ -94,6 +97,10 @@ final class CampaignEngine
 
             $resolved = $this->resolveVariables($message, $recipient, $type);
             $resolvedSubject = $this->resolveVariables($subject, $recipient, $type);
+            $whatsAppPayload = [];
+            if ($channel === 'whatsapp') {
+                $whatsAppPayload = $this->buildWhatsAppTemplatePayload($template, $recipient, $type);
+            }
             $trackingToken = bin2hex(random_bytes(16));
             if ($channel === 'email') {
                 $origin = rtrim((string) app_config('app.public_url', ''), '/');
@@ -116,6 +123,9 @@ final class CampaignEngine
                 'categoria' => $categoria,
                 'template_id' => (int) ($template['id'] ?? 0),
                 'template_name' => (string) ($template['name'] ?? ''),
+                'official_template' => (string) ($template['official_template'] ?? ''),
+                'template_language' => (string) ($template['language'] ?? 'es_CO'),
+                'whatsapp_payload' => $whatsAppPayload,
                 'tracking_token' => $trackingToken,
                 'attachment_path' => $attachmentPath,
                 'id_funcionario' => (int) ($user['id'] ?? 0),
@@ -163,6 +173,7 @@ final class CampaignEngine
             '{{ciudad}}' => (string) ($actor['ciudad'] ?? ''),
             '{{indicativo}}' => (string) ($actor['indicativo'] ?? ''),
             '{{tipo_documento}}' => (string) ($actor['tipo_documento'] ?? ''),
+            '{{link}}' => (string) ($actor['link'] ?? $actor['url'] ?? ''),
             '{{custom_message}}' => '',
         ];
         foreach ($actor as $key => $value) {
@@ -188,6 +199,77 @@ final class CampaignEngine
 
         $phone = (string) ($recipient['contacto'] ?? $recipient['celular'] ?? $recipient['celular_proveedor'] ?? $recipient['contacto'] ?? $recipient['telefono'] ?? '');
         return ActorPhone::clean($phone);
+    }
+
+    private function buildWhatsAppTemplatePayload(array $template, array $recipient, string $type): array
+    {
+        $templateName = trim((string) ($template['official_template'] ?? ''));
+        if ($templateName === '') {
+            throw new RuntimeException('La plantilla WhatsApp no tiene nombre oficial de Meta.');
+        }
+
+        $components = [];
+        $headerType = strtolower(trim((string) ($template['header_type'] ?? 'none')));
+        if (in_array($headerType, ['image', 'video', 'document'], true)) {
+            $headerUrl = trim($this->resolveVariables((string) ($template['header_url'] ?? ''), $recipient, $type));
+            if ($headerUrl === '') {
+                throw new RuntimeException('La plantilla WhatsApp requiere URL pública para el header ' . $headerType . '.');
+            }
+            if (!preg_match('/^https:\/\//i', $headerUrl)) {
+                throw new RuntimeException('La URL del header WhatsApp debe ser HTTPS pública.');
+            }
+
+            $media = ['link' => $headerUrl];
+            if ($headerType === 'document') {
+                $filename = trim($this->resolveVariables((string) ($template['header_filename'] ?? ''), $recipient, $type));
+                if ($filename !== '') {
+                    $media['filename'] = $filename;
+                }
+            }
+
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [[
+                    'type' => $headerType,
+                    $headerType => $media,
+                ]],
+            ];
+        }
+
+        $bodyTemplate = (string) ($template['body_text'] ?? '');
+        $bodyParameters = [];
+        foreach ($this->extractTemplateTokens($bodyTemplate) as $token) {
+            $value = trim($this->resolveVariables('{{' . $token . '}}', $recipient, $type));
+            $bodyParameters[] = ['type' => 'text', 'text' => $value !== '' ? $value : '-'];
+        }
+        if ($bodyParameters !== []) {
+            $components[] = ['type' => 'body', 'parameters' => $bodyParameters];
+        }
+
+        if (($template['button_type'] ?? 'none') === 'url_dynamic') {
+            $buttonValue = trim($this->resolveVariables((string) ($template['button_url_parameter'] ?? ''), $recipient, $type));
+            if ($buttonValue !== '') {
+                $components[] = [
+                    'type' => 'button',
+                    'sub_type' => 'url',
+                    'index' => '0',
+                    'parameters' => [['type' => 'text', 'text' => $buttonValue]],
+                ];
+            }
+        }
+
+        return [
+            'type' => 'template',
+            'template_name' => $templateName,
+            'template_language' => trim((string) ($template['language'] ?? 'es_CO')) ?: 'es_CO',
+            'components' => $components,
+        ];
+    }
+
+    private function extractTemplateTokens(string $template): array
+    {
+        preg_match_all('/{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}/', $template, $matches);
+        return $matches[1] ?? [];
     }
 
     private function isDuplicateForCampaign(int $actorId, string $tag, string $channel, string $type): bool
@@ -275,6 +357,8 @@ final class CampaignEngine
                 'categoria_mensaje' => $payload['categoria'] ?? 'info',
                 'template_id' => (int) ($payload['template_id'] ?? 0),
                 'template_name' => (string) ($payload['template_name'] ?? ''),
+                'official_template' => (string) ($payload['official_template'] ?? ''),
+                'template_language' => (string) ($payload['template_language'] ?? ''),
                 'nombre_funcionario' => $payload['nombre_funcionario'],
                 'tracking_token' => $payload['tracking_token'] ?? '',
                 'attachment_path' => $payload['attachment_path'] ?? null,
@@ -289,6 +373,9 @@ final class CampaignEngine
                 'name' => basename($attachmentPath),
             ]],
         ] : [];
+        if ($channel === 'whatsapp') {
+            $payloadJson = (array) ($payload['whatsapp_payload'] ?? []);
+        }
 
         $queueData = [
             'project_code' => 'gestor-actores',
@@ -296,7 +383,7 @@ final class CampaignEngine
             'channel' => $channel,
             'provider' => match ($channel) {
                 'sms' => 'sms_onurix',
-                'whatsapp' => 'whatsapp',
+                'whatsapp' => 'whatsapp_official',
                 default => 'email_smtp',
             },
             'destination' => $payload['destination'],
@@ -304,7 +391,10 @@ final class CampaignEngine
             'subject' => $payload['subject'],
             'message_html' => $channel === 'email' ? $payload['message'] : '',
             'message_text' => strip_tags($payload['message']),
-            'template_name' => (string) ($payload['template_name'] ?? ''),
+            'template_name' => $channel === 'whatsapp'
+                ? (string) ($payload['official_template'] ?? '')
+                : (string) ($payload['template_name'] ?? ''),
+            'template_language' => $channel === 'whatsapp' ? (string) ($payload['template_language'] ?? 'es_CO') : '',
             'payload_json' => json_encode($payloadJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'status' => 'pending',
