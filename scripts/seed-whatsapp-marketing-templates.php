@@ -42,6 +42,14 @@ $templates = [
         'contenido' => "Hola {{nombre}}.\n\n{{custom_message}}\n\nResponde a este mensaje y con gusto te orientamos.\n\nSKC SuCasa Inmobiliaria",
     ],
     [
+        'nombre' => 'WhatsApp Marketing - Video generico',
+        'whatsapp_template_name' => 'skc_marketing_video_generico_v1',
+        'whatsapp_category' => 'MARKETING',
+        'whatsapp_header_type' => 'video',
+        'whatsapp_header_url' => '',
+        'contenido' => "Hola {{nombre}}.\n\n{{custom_message}}\n\nMira el video en el encabezado de este mensaje y responde si quieres que te ampliemos la informacion.\n\nSKC SuCasa Inmobiliaria",
+    ],
+    [
         'nombre' => 'WhatsApp Marketing - Guardian',
         'whatsapp_template_name' => 'guardian_marketing_presentacion_v1',
         'whatsapp_category' => 'MARKETING',
