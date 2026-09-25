@@ -331,6 +331,7 @@ final class Router
             $message = trim((string) ($_POST['message'] ?? ($templateRecord['contenido'] ?? '')));
             if (strtolower($channel) === 'whatsapp' && $templateRecord !== []) {
                 $message = trim((string) ($template['body_text'] ?? TemplateRepository::whatsappBody($templateRecord)));
+                $template['custom_message'] = trim((string) ($_POST['whatsapp_custom_message'] ?? ''));
                 foreach (['header_url' => 'whatsapp_media_url', 'button_url_parameter' => 'whatsapp_button_url_parameter'] as $configKey => $postKey) {
                     $postedValue = trim((string) ($_POST[$postKey] ?? ''));
                     if ($postedValue !== '') {

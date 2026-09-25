@@ -174,7 +174,7 @@ final class CampaignEngine
             '{{indicativo}}' => (string) ($actor['indicativo'] ?? ''),
             '{{tipo_documento}}' => (string) ($actor['tipo_documento'] ?? ''),
             '{{link}}' => (string) ($actor['link'] ?? $actor['url'] ?? ''),
-            '{{custom_message}}' => '',
+            '{{custom_message}}' => (string) ($actor['custom_message'] ?? ''),
         ];
         foreach ($actor as $key => $value) {
             if (is_scalar($value) || $value === null) {
@@ -239,7 +239,9 @@ final class CampaignEngine
         $bodyTemplate = (string) ($template['body_text'] ?? '');
         $bodyParameters = [];
         foreach ($this->extractTemplateTokens($bodyTemplate) as $token) {
-            $value = trim($this->resolveVariables('{{' . $token . '}}', $recipient, $type));
+            $value = $token === 'custom_message'
+                ? trim((string) ($template['custom_message'] ?? ''))
+                : trim($this->resolveVariables('{{' . $token . '}}', $recipient, $type));
             $bodyParameters[] = ['type' => 'text', 'text' => $value !== '' ? $value : '-'];
         }
         if ($bodyParameters !== []) {

@@ -69,6 +69,8 @@
     const whatsappMediaWrap = form.querySelector('[data-whatsapp-media-wrap]');
     const whatsappButton = form.querySelector('input[name="whatsapp_button_url_parameter"]');
     const whatsappButtonWrap = form.querySelector('[data-whatsapp-button-wrap]');
+    const whatsappCustom = form.querySelector('input[name="whatsapp_custom_message"]');
+    const whatsappCustomWrap = form.querySelector('[data-whatsapp-custom-wrap]');
 
     if (subject) {
       subject.disabled = !email;
@@ -81,6 +83,8 @@
     if (whatsappMediaWrap) whatsappMediaWrap.hidden = channel !== 'whatsapp';
     if (whatsappButton) whatsappButton.disabled = channel !== 'whatsapp';
     if (whatsappButtonWrap) whatsappButtonWrap.hidden = channel !== 'whatsapp';
+    if (whatsappCustom) whatsappCustom.disabled = channel !== 'whatsapp';
+    if (whatsappCustomWrap) whatsappCustomWrap.hidden = channel !== 'whatsapp';
 
     const templatePicker = form.querySelector('[data-template-picker]');
     form.querySelectorAll('[data-template-picker] option').forEach((option) => {
@@ -207,6 +211,7 @@
         const message = form.querySelector('textarea[name="message"]');
         const whatsappMedia = form.querySelector('input[name="whatsapp_media_url"]');
         const whatsappButton = form.querySelector('input[name="whatsapp_button_url_parameter"]');
+        const whatsappCustom = form.querySelector('input[name="whatsapp_custom_message"]');
         if (campaignInput) campaignInput.value = '';
         if (campaignPicker) campaignPicker.value = '';
         if (templatePicker) templatePicker.value = '';
@@ -214,6 +219,7 @@
         if (message) message.value = '';
         if (whatsappMedia) whatsappMedia.value = '';
         if (whatsappButton) whatsappButton.value = '';
+        if (whatsappCustom) whatsappCustom.value = '';
       }
       if (channelSelect) {
         channelSelect.value = send.dataset.sendChannel || 'email';
